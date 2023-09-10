@@ -1,0 +1,24 @@
+<launch>
+	<!-- Provide Map name -->
+	<arg name="map_name" default="mapa_laser" />
+
+	<!-- Provide Robot radius -->
+	<arg name="inflation_radius" default="0.385" />
+
+	<arg name="open_rviz" default="true" />
+
+	<arg name="cell_size" default="5" />
+
+	<!-- Inflate and publish new map -->
+	<node name="inflate_map" pkg="map_to_grid" type="inflate_map_node" output="screen">
+		<param name="map_name" type="string" value="$(arg map_name)" />
+		<param name="inflation_radius" type="double" value="$(arg inflation_radius)" />
+		<param name="cell_size" type="int" value="$(arg cell_size)" />
+	</node>
+
+	<!-- Publish the original Map -->
+	<node name="map_server" pkg="map_server" type="map_server" args="$(find map_to_grid)/maps/$(arg map_name).yaml" />
+
+	<!-- Show in Rviz -->
+	<node name="rviz" pkg="rviz" type="rviz" args="-d $(find map_to_grid)/rviz/rviz_config.rviz"/>
+</launch>

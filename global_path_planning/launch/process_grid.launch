@@ -1,0 +1,4 @@
+<launch>
+	<!-- Inflate and publish new map -->
+	<node name="dijkstra_node" pkg="global_path_planning" type="dijkstra_node" output="screen" />
+</launch>
