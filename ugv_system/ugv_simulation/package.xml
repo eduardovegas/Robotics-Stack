@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>ugv_simulation</name>
+  <version>0.0.0</version>
+  <description>The ugv_simulation package</description>
+
+  <maintainer email="joao.gabriel.silva.santos@academico.ufpb.br">João Gabriel</maintainer>
+
+
+  <license>TODO</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <export>
+	<gazebo_ros gazebo_media_path="${prefix}" gazebo_model_path="${prefix}/models"/>
+	<exec_depend>map_server</exec_depend>
+  </export>
+</package>

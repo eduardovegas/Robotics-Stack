@@ -215,7 +215,7 @@ class DijkstraAlgo
 
             if(grid_data[goal_nearest_y_px*map_width + goal_nearest_x_px] != 0)
             {
-                ROS_WARN("Initial pose not defined. It is either on an obstacle or out of bounds.");
+                ROS_WARN("Goal pose not defined. It is either on an obstacle or out of bounds.");
                 has_goal_pose = false;
             }
             else

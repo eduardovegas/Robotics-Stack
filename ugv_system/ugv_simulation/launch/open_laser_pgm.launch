@@ -1,0 +1,7 @@
+<launch>
+	<!-- Start RViz -->
+	<node name="rviz" pkg="rviz" type="rviz" />
+
+	<!-- Publish the Map -->
+	<node name="map_server" pkg="map_server" type="map_server" args="$(find ugv_simulation)/mapa_laser.yaml" />
+</launch>

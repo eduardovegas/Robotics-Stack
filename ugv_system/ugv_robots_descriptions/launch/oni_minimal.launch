@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<launch>
+  
+  <arg name="x" default="4.52" />   <!--4.52-->
+  <arg name="y" default="2.37" />   <!--2.37-->
+  <arg name="z" default="0.03" />
+  <arg name="yaw" default="0.0"/>
+  
+  <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find ugv_robots_descriptions)/robots_description/oni/urdf/oni.urdf.xacro'" />
+
+  <!-- send fake joint values -->
+  <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+    <param name="use_gui" value="False" />
+  </node>
+
+  <!-- Combine joint values -->
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+
+  <!-- Show in Rviz   -->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find ugv_robots_descriptions)/rviz/rviz_minimal_visualization_oni_config.rviz"/>
+
+  <!-- args="-d $(find robot_description)/launch/robot.rviz"-->
+
+    <node name="oni_spawn" pkg="gazebo_ros" type="spawn_model" output="screen" args="-urdf 
+    -param robot_description -model oni -x $(arg x) -y $(arg y) -z $(arg z) -Y $(arg yaw)"></node>
+
+</launch>
