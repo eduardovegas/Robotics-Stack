@@ -20,9 +20,9 @@ public:
         VECTOR2D startP;
         VECTOR2D endP;
         double gradient;
-        double disatance;
-        double disatanceSquared;
-        double disatanceToAObj;
+        double distance;
+        double distanceSquared;
+        double distanceToAObj;
         LineSegment *shortestDistLine;
 
     };

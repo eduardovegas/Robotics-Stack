@@ -27,7 +27,7 @@ int main2() {
 
     bool pointRight= geo.isPointRightOfLine(line,point);
 
-    printf("Min Distance:% 7.3f Angle:% 7.3f \n", distance.disatance,line.gradient);
+    printf("Min Distance:% 7.3f Angle:% 7.3f \n", distance.distance,line.gradient);
 
     cout << "Point Right: " << pointRight <<endl;
 

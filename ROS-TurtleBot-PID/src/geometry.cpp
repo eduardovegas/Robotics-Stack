@@ -67,7 +67,7 @@ double Geometry::getMinimumDistancePointToLine(Geometry::LineSegment &l, VECTOR2
     // Return minimum distance between line segment l and point p
 
     double distance = sqrt(getMinimumDistancePointToLineSquared(l, p));
-    l.disatanceToAObj = distance;
+    l.distanceToAObj = distance;
 
    return distance;
 
@@ -83,7 +83,7 @@ double Geometry::getMinimumDistancePointToLineSquared(Geometry::LineSegment &l, 
 
     // Return minimum distance between line segment l and point p
 
-    double l_2 = l.disatanceSquared;
+    double l_2 = l.distanceSquared;
 
     if (l_2 == 0.0) return getDistance(l.startP, p);   // Line doesnt exist
 
@@ -116,7 +116,7 @@ Geometry::LineSegment Geometry::getMinimumDistanceLine(Geometry::LineSegment &l,
 
     // Return minimum distance between line segment l and point p
 
-    double l_2 = l.disatanceSquared;
+    double l_2 = l.distanceSquared;
 
     if (l_2 == 0.0)
 
@@ -243,8 +243,8 @@ Geometry::LineSegment Geometry::getLineSegment(VECTOR2D &a, VECTOR2D &b) {
     aTmp.startP = a;
     aTmp.endP = b;
     aTmp.gradient = getGradient(a, b);
-    aTmp.disatance = getDistance(a, b);
-    aTmp.disatanceSquared = getDistanceSquared(a, b);
+    aTmp.distance = getDistance(a, b);
+    aTmp.distanceSquared = getDistanceSquared(a, b);
     return aTmp;
 }
 
@@ -372,7 +372,7 @@ Geometry::LineSegment *Geometry::getNextLineSegment(Geometry::LineSegment* l) {
 
         //Fix for the last element: Get the 1st element
         if(index==size)
-            index=0;
+            index=size-1;
 
         //second means value [key, value]
         return &path[index];

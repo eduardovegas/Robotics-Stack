@@ -14,7 +14,6 @@ ISE, Indiana University
 #include "geometry.h"
 #include "pid.h"
 
-
 // global vars
 tf::Point Odom_pos;    //odometry position (x, y, z)
 double Odom_yaw;    //odometry orientation (yaw)
@@ -34,9 +33,9 @@ Geometry geometry;
 
 int num_slice2 = 50;               // divide a circle into segments
 
-double maxSpeed = 0.5;
+double maxSpeed = 0.3;
 double distanceConst = 0.5;
-double dt = 0.1, maxT = M_PI, minT = -M_PI, Kp = 0.3, Ki = 0.025, Kd = 0.01;
+double dt = 0.1, maxT = M_PI, minT = -M_PI, Kp = 0.3, Ki = 0.05, Kd = 0.01;
 double dtS = 0.1, maxS = maxSpeed, minS = 0.0, KpS = 0.08, KiS = 0.01, KdS = 0.005;
 
 
@@ -61,10 +60,6 @@ void odomCallback(const nav_msgs::Odometry odom_msg) {
     //ROS_INFO("Position: (%f, %f); Yaw: %f", Odom_pos.x(), Odom_pos.y(), Odom_yaw);
 }
 
-
-/*
- * display function that draws a circular lane in Rviz, with function  (x+0.5)^2 + (y-1)^2 = 4^2 
- */
 void displayLane(bool isTrajectoryPushed, Geometry &geometry) {
     static visualization_msgs::Marker path;
     path.type = visualization_msgs::Marker::LINE_STRIP;
@@ -131,8 +126,6 @@ void displayLane(bool isTrajectoryPushed, Geometry &geometry) {
 
 void dijkstraMarkerCallback(const visualization_msgs::Marker& msg)
 {
-    geometry.path.clear();
-
     VECTOR2D *prev = NULL, *current = NULL;
 
     std::vector<geometry_msgs::Point> path_points = msg.points;
@@ -152,16 +145,8 @@ void dijkstraMarkerCallback(const visualization_msgs::Marker& msg)
         }
         prev = current;
     }
-
-    // //If you want to connect start and END points
-    // if (prev != NULL && current != NULL && current != prev)
-    //     geometry.path.push_back(geometry.getLineSegment(*prev, *current));
 }
 
-
-/*
- * main function 
- */
 int main(int argc, char **argv) {
 
     ros::init(argc, argv, "control");
@@ -169,49 +154,33 @@ int main(int argc, char **argv) {
     tf::TransformListener m_listener;
     tf::StampedTransform transform;
 
+    int frame_count= 0;
+
     cmd_vel_pub = n.advertise<geometry_msgs::Twist>("cmd_vel", 1);
-    // marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 1);
 
     odom_sub = n.subscribe("odom", 10, odomCallback);
     marker_sub = n.subscribe("/dijkstra_path_marker", 10, dijkstraMarkerCallback);
 
     ros::Rate loop_rate(10); // ros spins 10 frames per second
-
-    //we use geometry_msgs::twist to specify linear and angular speeds (v, w) which also denote our control inputs to pass to turtlebot
     geometry_msgs::Twist tw_msg;
-
-
-    // //trajectory details are here
-    // Geometry geometry;
 
     double angleError = 0.0;
     double speedError = 0.0;
 
-    int frame_count = 0;
     PID pidTheta = PID(dt, maxT, minT, Kp, Kd, Ki);
     PID pidVelocity = PID(dtS, maxS, minS, KpS, KdS, KiS);
-    
-    while (ros::ok()) {
+        
+    while(ros::ok())
+    {
         if (frame_count == 0)
             displayLane(false, geometry);
         else
             displayLane(true, geometry);
         //ROS_INFO("frame %d", frame_count);
 
-/*
-
-YOUR CONTROL STRETEGY HERE
-you need to define vehicle dynamics first (dubins car model)
-after you computed your control input (here angular speed) w, pass w value to "tw_msg.angular.z" below
-
-*/
-
         double omega = 0.0;
         double speed = 0.0;
         double prevDistError = 1000.0;
-
-
-        double tb3_lenth = 0.125;
 
         /*Error calculation*/
         VECTOR2D current_pos, pos_error;
@@ -227,87 +196,91 @@ after you computed your control input (here angular speed) w, pass w value to "t
 
         Geometry::LineSegment *nextLinesegment = geometry.getNextLineSegment(linesegment);
 
-        double targetDistanceEnd = geometry.getDistance(current_pos, linesegment->endP);
-        double targetDistanceStart = geometry.getDistance(current_pos, linesegment->startP);
-
-        //Distance Error
-        double distError = 0.0;
-
-        double targetAnglePerpen = geometry.getGradient(current_pos, linesegmentPerpen.endP);
-
-        VECTOR2D target = linesegment->endP;
-        double targetAngle = geometry.getGradient(current_pos, target);
-        double distanceToClosestPath = abs(linesegment->disatanceToAObj);
-
-        //Error calculation based on angles
-        if (distanceToClosestPath < distanceConst) {
-
-            // This goes towards the end point of the line segment-> Select vary small distanceConst
-
-            //angleError = targetAngle - Odom_yaw;
-            double directional = targetAngle;
-
-            double discripancy = targetAnglePerpen - directional;
-            discripancy = geometry.correctAngle(discripancy);
-
-            //Adding some potion of perpendicular angle to the error
-            discripancy = 0.5* discripancy / distanceConst * abs(distanceToClosestPath);
-
-            double combined = targetAngle + discripancy;
-
-            angleError = combined - Odom_yaw;
-
-
-        } else {
-
-            //This goes toward the minimum distance point of the path
-
-            angleError = targetAnglePerpen - Odom_yaw;
-
+        //this is true only if it arrived at destination
+        if(linesegment == nextLinesegment)
+        {
+            //for linear speed, we only use the first component of 3D linear velocity "linear.x" to represent the speed "v"
+            speed = 0.0;
+            //for angular speed, we only use the third component of 3D angular velocity "angular.z" to represent the speed "w" (in radian)
+            omega = 0.0;
         }
+        else
+        {
+            double targetDistanceEnd = geometry.getDistance(current_pos, linesegment->endP);
+            double targetDistanceStart = geometry.getDistance(current_pos, linesegment->startP);
 
-        speed = maxSpeed;
+            //Distance Error
+            double distError = 0.0;
 
-//If lines are long and it has sharp edges
-        if (nextLinesegment->disatance > 3.0 && linesegment->disatance > 3.0) {
-            //angleError correction for sharp turns
-            if (targetDistanceEnd < 0.5) {
-                double futureAngleChange = nextLinesegment->gradient - linesegment->gradient;
-                futureAngleChange = geometry.correctAngle(futureAngleChange);
+            double targetAnglePerpen = geometry.getGradient(current_pos, linesegmentPerpen.endP);
+
+            VECTOR2D target = linesegment->endP;
+            double targetAngle = geometry.getGradient(current_pos, target);
+            double distanceToClosestPath = abs(linesegment->distanceToAObj);
+
+            //Error calculation based on angles
+            if (distanceToClosestPath < distanceConst) {
+
+                // This goes towards the end point of the line segment-> Select vary small distanceConst
+
+                //angleError = targetAngle - Odom_yaw;
+                double directional = targetAngle;
+
+                double discripancy = targetAnglePerpen - directional;
+                discripancy = geometry.correctAngle(discripancy);
 
                 //Adding some potion of perpendicular angle to the error
-                futureAngleChange = futureAngleChange / distanceConst * abs(targetDistanceEnd);
+                discripancy = 0.5* discripancy / distanceConst * abs(distanceToClosestPath);
 
-                double combined = targetAngle + futureAngleChange;
+                double combined = targetAngle + discripancy;
 
                 angleError = combined - Odom_yaw;
+
+            } else {
+                //This goes toward the minimum distance point of the path
+                angleError = targetAnglePerpen - Odom_yaw;
             }
 
-            //Velocity Error Calculation for sharp turns
-            if (targetDistanceStart < 0.7 || targetDistanceEnd < 0.7) {
+            speed = maxSpeed;
 
-                double targetDistance = targetDistanceEnd;
+            //If lines are long and it has sharp edges
+            if (nextLinesegment->distance > 3.0 && linesegment->distance > 3.0) {
+                //angleError correction for sharp turns
+                if (targetDistanceEnd < 0.5) {
+                    double futureAngleChange = nextLinesegment->gradient - linesegment->gradient;
+                    futureAngleChange = geometry.correctAngle(futureAngleChange);
 
-                if (targetDistanceStart < targetDistanceEnd)
-                    targetDistance = targetDistanceStart;
+                    //Adding some potion of perpendicular angle to the error
+                    futureAngleChange = futureAngleChange / distanceConst * abs(targetDistanceEnd);
 
-                double speedError = 0.3 * maxSpeed * exp(-abs(targetDistance));
+                    double combined = targetAngle + futureAngleChange;
 
-                speed = pidVelocity.calculate(maxSpeed, -speedError);
+                    angleError = combined - Odom_yaw;
+                }
+
+                //Velocity Error Calculation for sharp turns
+                if (targetDistanceStart < 0.7 || targetDistanceEnd < 0.7) {
+
+                    double targetDistance = targetDistanceEnd;
+
+                    if (targetDistanceStart < targetDistanceEnd)
+                        targetDistance = targetDistanceStart;
+
+                    double speedError = 0.3 * maxSpeed * exp(-abs(targetDistance));
+
+                    speed = pidVelocity.calculate(maxSpeed, -speedError);
+                }
+
             }
 
+            //Error Angle correction for large angles
+            angleError = geometry.correctAngle(angleError);
+            //PID for the angle
+            omega = pidTheta.calculate(0, -angleError);
         }
 
-        //Error Angle correction for large angles
-        angleError = geometry.correctAngle(angleError);
-        //PID for the angle
-        omega = pidTheta.calculate(0, -angleError);
-
-        //ROS_INFO("Nearest %f,%f, dist %f ,ShortestDistanceVecAngle %f, Odom_yaw %f, Error: %f , omega: %f", linesegment->startP.x,linesegment->startP.y, linesegment->disatanceToAObj,angleError,Odom_yaw,angleError,omega);
-
         ROS_INFO("Odom_yaw %f, Angle Error: %f , omega: %f Speed %f, Speed Error: %f , speedSet: %f", Odom_yaw,
-                 angleError, omega, Odom_v, speedError, speed);
-
+                    angleError, omega, Odom_v, speedError, speed);
 
         //for linear speed, we only use the first component of 3D linear velocity "linear.x" to represent the speed "v"
         tw_msg.linear.x = speed;
@@ -317,13 +290,11 @@ after you computed your control input (here angular speed) w, pass w value to "t
         //publish this message to the robot
         cmd_vel_pub.publish(tw_msg);
 
-        frame_count++;
         ros::spinOnce();
         loop_rate.sleep();
     }
 
     return 0;
-
 }
 
 
